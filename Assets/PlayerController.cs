@@ -1,16 +1,53 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
-[RequireComponent(typeof(MovementController))]
-[RequireComponent(typeof(CameraController))]
+[RequireComponent(typeof(Rigidbody))]
 public class PlayerController : MonoBehaviour
 {
+    [Header("Grappling Hook")]
+
     [SerializeField]
-    private float m_maxGrappleForce = 30f;
+    private float m_maxGrappleForce = 100f;
+
+    private float m_maxGrappleLength = 10f;
 
     [SerializeField]
     private GameObject m_grapplePrefab;
+
+    [Header("Movement")]
+
+    [SerializeField]
+    [Min(0f)]
+    private float m_maxSpeed = 5f;
+
+    [SerializeField]
+    [Min(0f)]
+    private float m_acceleration = 50f;
+
+    [SerializeField]
+    [Min(0f)]
+    private float m_friction = 5f;
+
+    [SerializeField]
+    [Min(0f)]
+    private float m_jumpSpeed = 5f;
+
+    [SerializeField]
+    private Collider m_groundCollider;
+
+    [System.NonSerialized]
+    public Rigidbody m_rigidbody;
+
+    [System.NonSerialized]
+    public bool m_isGrounded = false;
+
+    [System.NonSerialized]
+    public bool m_isNearGrounded = false;
+
+    [System.NonSerialized]
+    public bool m_doFriction = true;
 
     private enum AttachType
     {
@@ -20,10 +57,13 @@ public class PlayerController : MonoBehaviour
     }
 
     CameraController m_cameraController;
-    MovementController m_movementController;
 
     Controls m_controls;
+    // Grappling Hook
     float m_fire;
+    // Movement
+    Vector2 m_move;
+    bool m_jump;
 
     Vector3 m_grapplePosition;
     AttachType m_attachType;
@@ -49,11 +89,18 @@ public class PlayerController : MonoBehaviour
 
         m_controls.Player.Fire.performed += context => Fire();
         m_controls.Player.Fire.canceled += context => Release();
+
+        m_controls.Player.Move.performed += context => m_move = context.ReadValue<Vector2>();
+        m_controls.Player.Move.canceled += context => m_move = Vector2.zero;
+
+        m_controls.Player.Jump.performed += context => m_jump = true;
+        m_controls.Player.Jump.canceled += context => m_jump = false;
     }
 
     void Start()
     {
-        m_movementController = GetComponent<MovementController>();
+        m_rigidbody = GetComponent<Rigidbody>();
+
         m_cameraController = GetComponent<CameraController>();
     }
 
@@ -65,34 +112,103 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    Vector3 CalculateGrappleForce(float maxForce, Vector3 start, Vector3 end)
+    {
+        float grappleForce = maxForce;
+        Vector3 gravityForce = Physics.gravity * m_rigidbody.mass;
+        Vector3 pullDirection;
+        float distance;
+
+        distance = (m_grapplePosition - transform.position).magnitude;
+        pullDirection = (m_grapplePosition - transform.position) / distance;
+        Vector3 tangentialVelocity = m_rigidbody.velocity - Vector3.Project(m_rigidbody.velocity, pullDirection);
+
+        float pullDotVel = Vector3.Dot(pullDirection, m_rigidbody.velocity.normalized);
+        if (pullDotVel < 0f && distance > 5f)
+        {
+            // Increase pulling force to make a circular orbit
+            float targetForce = m_rigidbody.mass * m_rigidbody.velocity.sqrMagnitude / distance;
+            targetForce += Vector3.Project(gravityForce, pullDirection).magnitude;
+
+            grappleForce = Mathf.Lerp(targetForce, grappleForce, -pullDotVel);
+        }
+        else
+        {
+            // Pull in towards the point
+            distance = Mathf.Max(distance, 5f);
+
+            float targetForce = m_rigidbody.mass * m_rigidbody.velocity.sqrMagnitude / distance;
+            targetForce += Vector3.Project(gravityForce, pullDirection).magnitude;
+
+            float tangentialSpeed = Mathf.Clamp(tangentialVelocity.magnitude, 1f, 5f);
+
+            grappleForce = Mathf.Lerp(targetForce, grappleForce * 0.25f, Mathf.Clamp(pullDotVel * tangentialSpeed, 0f, 1f));
+
+            if (Vector3.Dot(-gravityForce.normalized, pullDirection.normalized) > 0)
+            {
+                grappleForce = grappleForce * Mathf.Lerp(0f, 1f, Vector3.Dot(-gravityForce.normalized, pullDirection.normalized));
+            }
+            else
+            {
+                grappleForce = grappleForce * Mathf.Lerp(0f, 1f, Mathf.Min(10f * Vector3.Dot(gravityForce.normalized, pullDirection.normalized), 1f));
+            }
+        }
+
+        return pullDirection * grappleForce;
+    }
+
+    void FixedUpdate_GrapplingHook()
+    {
+        //float grappleForce = m_maxGrappleForce;
+        //Vector3 gravityForce = Physics.gravity * m_rigidbody.mass;
+        //Vector3 pullDirection;
+
+        Vector3 grappleForce;
+
+        switch (m_attachType)
+        {
+            case AttachType.Terrain:
+                grappleForce = CalculateGrappleForce(m_maxGrappleForce, transform.position, m_grapplePosition);
+
+                m_rigidbody.AddForce(grappleForce);
+
+                break;
+            case AttachType.Rigidbody:
+                Vector3 worldGrapplePosition = m_grappledTransform.TransformPoint(m_grapplePosition);
+                Vector3 pullDirection = (worldGrapplePosition - transform.position).normalized;
+
+                grappleForce = m_maxGrappleForce * pullDirection;
+
+                float percentForce = m_rigidbody.mass / (m_grappledRigidbody.mass + m_rigidbody.mass);
+
+                m_rigidbody.AddForce(grappleForce * (1 - percentForce), ForceMode.Acceleration);
+                m_grappledRigidbody.AddForceAtPosition(-grappleForce * percentForce, worldGrapplePosition, ForceMode.Acceleration);
+
+                break;
+        }
+    }
+
+    void FixedUpdate_Movement()
+    {
+        m_isGrounded = Physics.CheckCapsule(m_groundCollider.bounds.center, new Vector3(m_groundCollider.bounds.center.x, m_groundCollider.bounds.min.y, m_groundCollider.bounds.center.z), 0.1f, ~LayerMask.GetMask("Ignore Raycast"));
+        m_isNearGrounded = Physics.CheckCapsule(m_groundCollider.bounds.center, new Vector3(m_groundCollider.bounds.center.x, m_groundCollider.bounds.min.y, m_groundCollider.bounds.center.z), 1f, ~LayerMask.GetMask("Ignore Raycast"));
+
+        HandleMove();
+        HandleJump();
+    }
+
+    void FixedUpdate()
+    {
+        FixedUpdate_GrapplingHook();
+        FixedUpdate_Movement();
+    }
+
     private void OnCollisionEnter(Collision collision)
     {
         if (m_grappledHoldable != null && collision.gameObject.GetInstanceID() == m_grappledHoldable.gameObject.GetInstanceID())
         {
             m_grappledHoldable.Hold(transform);
             ReleaseGrapple();
-        }
-    }
-
-    void FixedUpdate()
-    {
-        float grappleForce = m_maxGrappleForce;
-
-        switch (m_attachType)
-        {
-            case AttachType.Terrain:
-                m_movementController.m_rigidbody.AddForce((m_grapplePosition - transform.position).normalized * grappleForce);
-                break;
-            case AttachType.Rigidbody:
-                Vector3 worldGrapplePosition = m_grappledTransform.TransformPoint(m_grapplePosition);
-                Vector3 pullDirection = (worldGrapplePosition - transform.position).normalized;
-
-                float percentForce = m_movementController.m_rigidbody.mass / (m_grappledRigidbody.mass + m_movementController.m_rigidbody.mass);
-
-                m_movementController.m_rigidbody.AddForce(pullDirection * grappleForce * (1 - percentForce), ForceMode.Acceleration);
-                //m_grappledRigidbody.AddForce(-pullDirection * grappleForce * percentForce, ForceMode.Acceleration);
-                m_grappledRigidbody.AddForceAtPosition(-pullDirection * grappleForce * percentForce, worldGrapplePosition, ForceMode.Acceleration);
-                break;
         }
     }
 
@@ -119,7 +235,7 @@ public class PlayerController : MonoBehaviour
         if (m_grappledHoldable != null && m_grappledHoldable.m_isHeld)
         {
             m_grappledHoldable.Release();
-            m_grappledHoldable.m_rigidbody.velocity = m_movementController.m_rigidbody.velocity;
+            m_grappledHoldable.m_rigidbody.velocity = m_rigidbody.velocity;
             m_grappledHoldable.m_rigidbody.AddForce(m_cameraController.m_camera.transform.forward * 3f, ForceMode.Impulse);
             m_grappledHoldable = null;
         }
@@ -143,7 +259,7 @@ public class PlayerController : MonoBehaviour
                 m_attachType = AttachType.Terrain;
 
                 m_grappleLine = Instantiate(m_grapplePrefab);
-                m_movementController.m_doFriction = false;
+                m_doFriction = false;
             }
             else
             {
@@ -155,7 +271,7 @@ public class PlayerController : MonoBehaviour
                 m_grappledHoldable = hit.transform.gameObject.GetComponent<Holdable>();
 
                 m_grappleLine = Instantiate(m_grapplePrefab);
-                m_movementController.m_doFriction = false;
+                m_doFriction = false;
             }
         }
     }
@@ -170,6 +286,40 @@ public class PlayerController : MonoBehaviour
         m_attachType = AttachType.None;
 
         Destroy(m_grappleLine);
-        m_movementController.m_doFriction = true;
+        m_doFriction = true;
+    }
+
+    private void HandleMove()
+    {
+        Vector3 horizontalVelocity = new Vector3(m_rigidbody.velocity.x, 0f, m_rigidbody.velocity.z);
+        float horizontalSpeed = horizontalVelocity.magnitude;
+
+        Vector3 moveDir = transform.localToWorldMatrix * new Vector3(m_move.x, 0f, m_move.y);
+
+        if (horizontalSpeed > m_maxSpeed && horizontalSpeed > 0)
+        {
+            Vector3 horizontalDir = horizontalVelocity / horizontalSpeed;
+            float movementAllowance = Vector3.Dot(moveDir, horizontalDir);
+
+            if (movementAllowance > 0)
+            {
+                moveDir -= movementAllowance * horizontalDir;
+            }
+        }
+
+        if (m_isGrounded && m_doFriction)
+        {
+            m_rigidbody.AddForce(-horizontalVelocity * m_friction);
+        }
+
+        m_rigidbody.AddForce(moveDir * m_acceleration, ForceMode.Acceleration);
+    }
+
+    private void HandleJump()
+    {
+        if (m_jump && m_isGrounded)
+        {
+            m_rigidbody.velocity = new Vector3(m_rigidbody.velocity.x, m_jumpSpeed, m_rigidbody.velocity.z);
+        }
     }
 }
