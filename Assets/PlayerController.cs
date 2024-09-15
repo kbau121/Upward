@@ -159,10 +159,6 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate_GrapplingHook()
     {
-        //float grappleForce = m_maxGrappleForce;
-        //Vector3 gravityForce = Physics.gravity * m_rigidbody.mass;
-        //Vector3 pullDirection;
-
         Vector3 grappleForce;
 
         switch (m_attachType)
@@ -177,7 +173,7 @@ public class PlayerController : MonoBehaviour
                 Vector3 worldGrapplePosition = m_grappledTransform.TransformPoint(m_grapplePosition);
                 Vector3 pullDirection = (worldGrapplePosition - transform.position).normalized;
 
-                grappleForce = m_maxGrappleForce * pullDirection;
+                grappleForce = m_maxGrappleForce * pullDirection * 0.5f;
 
                 float percentForce = m_rigidbody.mass / (m_grappledRigidbody.mass + m_rigidbody.mass);
 
