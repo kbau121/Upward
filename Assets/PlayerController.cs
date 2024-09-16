@@ -296,7 +296,7 @@ public class PlayerController : MonoBehaviour
         RaycastHit hit;
         Ray ray = new Ray(m_cameraController.m_camera.transform.position, m_cameraController.m_camera.transform.forward);
 
-        if (Physics.Raycast(ray, out hit, Mathf.Infinity, ~LayerMask.GetMask("Ignore Raycast")))
+        if (Physics.Raycast(ray, out hit, m_maxGrappleLength, ~LayerMask.GetMask("Ignore Raycast")))
         {
             m_grappleState = GrappleState.Ready;
             return;
@@ -324,13 +324,14 @@ public class PlayerController : MonoBehaviour
     private void FireGrapple()
     {
         if (m_shotCount <= 0) return;
-        if (!m_isGrounded) --m_shotCount;
 
         RaycastHit hit;
         Ray ray = new Ray(m_cameraController.m_camera.transform.position, m_cameraController.m_camera.transform.forward);
 
-        if (Physics.Raycast(ray, out hit, Mathf.Infinity, ~LayerMask.GetMask("Ignore Raycast")))
+        if (Physics.Raycast(ray, out hit, m_maxGrappleLength, ~LayerMask.GetMask("Ignore Raycast")))
         {
+            if (!m_isGrounded) --m_shotCount;
+
             if (hit.rigidbody == null)
             {
                 m_grappledTransform = null;
