@@ -11,7 +11,8 @@ public class Gate : MonoBehaviour
         Key key = collision.gameObject.GetComponent<Key>();
         if (key != null && key.m_ID == m_key.m_ID)
         {
-            gameObject.SetActive(false);
+            Destroy(key.gameObject);
+            Destroy(gameObject);
         }
     }
 }

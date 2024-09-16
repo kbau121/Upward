@@ -2,6 +2,8 @@ using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.UI;
+using UnityEngine.UIElements;
 
 [RequireComponent(typeof(Rigidbody))]
 public class PlayerController : MonoBehaviour
@@ -11,10 +13,23 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private float m_maxGrappleForce = 100f;
 
+    [SerializeField]
     private float m_maxGrappleLength = 10f;
 
     [SerializeField]
     private GameObject m_grapplePrefab;
+
+    [SerializeField]
+    private Text m_grappleCount;
+
+    [SerializeField]
+    private List<UnityEngine.UI.Image> m_crosshairs;
+
+    [SerializeField]
+    public int m_maxShotCount = 3;
+    private int m_shotCount;
+
+    private GrappleState m_grappleState;
 
     [Header("Movement")]
 
@@ -54,6 +69,14 @@ public class PlayerController : MonoBehaviour
         None,
         Terrain,
         Rigidbody
+    }
+
+    private enum GrappleState
+    {
+        Empty,
+        OutsideRange,
+        Ready,
+        Active
     }
 
     CameraController m_cameraController;
@@ -102,13 +125,37 @@ public class PlayerController : MonoBehaviour
         m_rigidbody = GetComponent<Rigidbody>();
 
         m_cameraController = GetComponent<CameraController>();
+
+        m_shotCount = m_maxShotCount;
     }
 
     void Update()
     {
+        UpdateGrappleState();
+
         if (m_attachType != AttachType.None)
         {
             UpdateGrappleLine();
+        }
+
+        m_grappleCount.text = m_shotCount.ToString();
+        foreach (UnityEngine.UI.Image image in m_crosshairs)
+        {
+            switch (m_grappleState)
+            {
+                case GrappleState.Active:
+                    image.color = Color.blue;
+                    break;
+                case GrappleState.OutsideRange:
+                    image.color = Color.black;
+                    break;
+                case GrappleState.Empty:
+                    image.color = Color.red;
+                    break;
+                case GrappleState.Ready:
+                    image.color = Color.green;
+                    break;
+            }
         }
     }
 
@@ -144,7 +191,11 @@ public class PlayerController : MonoBehaviour
 
             grappleForce = Mathf.Lerp(targetForce, grappleForce * 0.25f, Mathf.Clamp(pullDotVel * tangentialSpeed, 0f, 1f));
 
-            if (Vector3.Dot(-gravityForce.normalized, pullDirection.normalized) > 0)
+            if (m_isGrounded)
+            {
+                
+            }
+            else if (Vector3.Dot(-gravityForce.normalized, pullDirection.normalized) > 0)
             {
                 grappleForce = grappleForce * Mathf.Lerp(0f, 1f, Vector3.Dot(-gravityForce.normalized, pullDirection.normalized));
             }
@@ -159,6 +210,8 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate_GrapplingHook()
     {
+        if (m_isGrounded) m_shotCount = m_maxShotCount;
+
         Vector3 grappleForce;
 
         switch (m_attachType)
@@ -226,6 +279,33 @@ public class PlayerController : MonoBehaviour
         }
     }
 
+    private void UpdateGrappleState()
+    {
+        if (m_attachType != AttachType.None)
+        {
+            m_grappleState = GrappleState.Active;
+            return;
+        }
+
+        if (m_shotCount <= 0)
+        {
+            m_grappleState = GrappleState.Empty;
+            return;
+        }
+
+        RaycastHit hit;
+        Ray ray = new Ray(m_cameraController.m_camera.transform.position, m_cameraController.m_camera.transform.forward);
+
+        if (Physics.Raycast(ray, out hit, Mathf.Infinity, ~LayerMask.GetMask("Ignore Raycast")))
+        {
+            m_grappleState = GrappleState.Ready;
+            return;
+        }
+
+        m_grappleState = GrappleState.OutsideRange;
+        return;
+    }
+
     private void Fire()
     {
         if (m_grappledHoldable != null && m_grappledHoldable.m_isHeld)
@@ -243,6 +323,9 @@ public class PlayerController : MonoBehaviour
 
     private void FireGrapple()
     {
+        if (m_shotCount <= 0) return;
+        if (!m_isGrounded) --m_shotCount;
+
         RaycastHit hit;
         Ray ray = new Ray(m_cameraController.m_camera.transform.position, m_cameraController.m_camera.transform.forward);
 

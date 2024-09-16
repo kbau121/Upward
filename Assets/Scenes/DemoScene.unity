@@ -2705,7 +2705,7 @@ Canvas:
   m_OverridePixelPerfect: 0
   m_SortingBucketNormalizedSize: 0
   m_VertexColorAlwaysGammaSpace: 0
-  m_AdditionalShaderChannelsFlag: 0
+  m_AdditionalShaderChannelsFlag: 25
   m_UpdateRectTransformForStandalone: 0
   m_SortingLayerID: 0
   m_SortingOrder: 0
@@ -2724,6 +2724,7 @@ RectTransform:
   m_Children:
   - {fileID: 866475585}
   - {fileID: 72272647}
+  - {fileID: 1217381406}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -4801,10 +4802,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46bdc7fc46eb7474e8d27fd2ac0d456e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_heldPosition: {x: 0, y: 0, z: 0.5}
-  m_heldScale: {x: 0.5, y: 0.5, z: 0.5}
-  m_heldRotation: {x: 0, y: 0, z: 0}
-  m_rigidbody: {fileID: 0}
+  m_heldPosition_f: {x: 0, y: 0, z: 0.5}
+  m_heldScale_f: {x: 0.5, y: 0.5, z: 0.5}
+  m_heldRotation_f: {x: 0, y: 0, z: 0}
+  m_heldPosition_t: {x: 0.5, y: 0, z: 0.5}
+  m_heldScale_t: {x: 0.75, y: 0.75, z: 0.75}
+  m_heldRotation_t: {x: 0, y: 0, z: 0}
+  m_rigidbody: {fileID: 751776109}
 --- !u!54 &751776109
 Rigidbody:
   m_ObjectHideFlags: 0
@@ -5082,6 +5086,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_camera: {fileID: 546195232}
   m_sensitivity: 0.1
+  m_mode: 1
+  distance: 5
+  offset: {x: 1, y: 1, z: 0}
 --- !u!114 &791079046
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5095,7 +5102,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_maxGrappleForce: 100
+  m_maxGrappleLength: 10
   m_grapplePrefab: {fileID: 8004564873603502171, guid: 2cd1c5b34ff116f4a807880b2b898585, type: 3}
+  m_grappleCount: {fileID: 1217381407}
+  m_crosshairs:
+  - {fileID: 866475586}
+  - {fileID: 72272648}
+  m_maxShotCount: 3
   m_maxSpeed: 5
   m_acceleration: 50
   m_friction: 5
@@ -7963,6 +7976,85 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 148846677ebb1604187fa8739d8dbfcf, type: 3}
+--- !u!1 &1217381405
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1217381406}
+  - component: {fileID: 1217381408}
+  - component: {fileID: 1217381407}
+  m_Layer: 5
+  m_Name: GrappleCount
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1217381406
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1217381405}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 391015723}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 1, y: 0}
+  m_AnchorMax: {x: 1, y: 0}
+  m_AnchoredPosition: {x: -20, y: 50}
+  m_SizeDelta: {x: 0, y: 200}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1217381407
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1217381405}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.19607843, g: 0.19607843, b: 0.19607843, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_FontData:
+    m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
+    m_FontSize: 60
+    m_FontStyle: 0
+    m_BestFit: 0
+    m_MinSize: 3
+    m_MaxSize: 60
+    m_Alignment: 5
+    m_AlignByGeometry: 0
+    m_RichText: 1
+    m_HorizontalOverflow: 0
+    m_VerticalOverflow: 0
+    m_LineSpacing: 1
+  m_Text: GrappleCount
+--- !u!222 &1217381408
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1217381405}
+  m_CullTransparentMesh: 1
 --- !u!1001 &1221099319
 PrefabInstance:
   m_ObjectHideFlags: 0

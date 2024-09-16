@@ -146,6 +146,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46bdc7fc46eb7474e8d27fd2ac0d456e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_heldScale: {x: 1, y: 1, z: 1}
-  m_heldPosition: {x: 0, y: 0, z: 0}
-  m_heldRotation: {x: 0, y: 0, z: 0}
+  m_heldPosition_f: {x: 0, y: 0, z: 0.5}
+  m_heldScale_f: {x: 0.5, y: 0.5, z: 0.5}
+  m_heldRotation_f: {x: 0, y: 0, z: 0}
+  m_heldPosition_t: {x: 0.5, y: 0, z: 0.5}
+  m_heldScale_t: {x: 0.75, y: 0.75, z: 0.75}
+  m_heldRotation_t: {x: 0, y: 0, z: 0}
+  m_rigidbody: {fileID: 0}

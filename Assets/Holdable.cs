@@ -5,14 +5,75 @@ using UnityEngine;
 [RequireComponent(typeof(Rigidbody))]
 public class Holdable : MonoBehaviour
 {
-    [SerializeField]
-    private Vector3 m_heldPosition = new Vector3(0, 0, 0);
+    [Header("First Person")]
 
     [SerializeField]
-    private Vector3 m_heldScale = new Vector3(1, 1, 1);
+    private Vector3 m_heldPosition_f = new Vector3(0, 0, 0);
 
     [SerializeField]
-    private Vector3 m_heldRotation = new Vector3(0, 0, 0);
+    private Vector3 m_heldScale_f = new Vector3(1, 1, 1);
+
+    [SerializeField]
+    private Vector3 m_heldRotation_f = new Vector3(0, 0, 0);
+
+    [Header("Third Person")]
+
+    [SerializeField]
+    private Vector3 m_heldPosition_t = new Vector3(0, 0, 0);
+
+    [SerializeField]
+    private Vector3 m_heldScale_t = new Vector3(1, 1, 1);
+
+    [SerializeField]
+    private Vector3 m_heldRotation_t = new Vector3(0, 0, 0);
+
+    private Vector3 m_heldPosition
+    {
+        get
+        {
+            switch (CameraController.activeMode)
+            {
+                case (CameraController.Mode.FirstPerson):
+                    return m_heldPosition_f;
+                case (CameraController.Mode.ThirdPerson):
+                    return m_heldPosition_t;
+                default:
+                    return m_heldPosition_t;
+            }
+        }
+    }
+
+    private Vector3 m_heldScale
+    {
+        get
+        {
+            switch (CameraController.activeMode)
+            {
+                case (CameraController.Mode.FirstPerson):
+                    return m_heldScale_f;
+                case (CameraController.Mode.ThirdPerson):
+                    return m_heldScale_t;
+                default:
+                    return m_heldScale_t;
+            }
+        }
+    }
+
+    private Vector3 m_heldRotation
+    {
+        get
+        {
+            switch (CameraController.activeMode)
+            {
+                case (CameraController.Mode.FirstPerson):
+                    return m_heldRotation_f;
+                case (CameraController.Mode.ThirdPerson):
+                    return m_heldRotation_t;
+                default:
+                    return m_heldRotation_t;
+            }
+        }
+    }
 
     [System.NonSerialized]
     public bool m_isHeld = false;
