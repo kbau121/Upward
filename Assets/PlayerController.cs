@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.VisualScripting;
@@ -76,7 +77,8 @@ public class PlayerController : MonoBehaviour
         Empty,
         OutsideRange,
         Ready,
-        Active
+        Active,
+        Held
     }
 
     CameraController m_cameraController;
@@ -155,6 +157,9 @@ public class PlayerController : MonoBehaviour
                 case GrappleState.Ready:
                     image.color = Color.green;
                     break;
+                case GrappleState.Held:
+                    image.color = Color.black;
+                    break;
             }
         }
     }
@@ -223,15 +228,21 @@ public class PlayerController : MonoBehaviour
 
                 break;
             case AttachType.Rigidbody:
-                Vector3 worldGrapplePosition = m_grappledTransform.TransformPoint(m_grapplePosition);
-                Vector3 pullDirection = (worldGrapplePosition - transform.position).normalized;
+                try
+                {
+                    Vector3 worldGrapplePosition = m_grappledTransform.TransformPoint(m_grapplePosition);
+                    Vector3 pullDirection = (worldGrapplePosition - transform.position).normalized;
 
-                grappleForce = m_maxGrappleForce * pullDirection * 0.5f;
+                    grappleForce = m_maxGrappleForce * pullDirection * 0.5f;
 
-                float percentForce = m_rigidbody.mass / (m_grappledRigidbody.mass + m_rigidbody.mass);
+                    float percentForce = m_rigidbody.mass / (m_grappledRigidbody.mass + m_rigidbody.mass);
 
-                m_rigidbody.AddForce(grappleForce * (1 - percentForce), ForceMode.Acceleration);
-                m_grappledRigidbody.AddForceAtPosition(-grappleForce * percentForce, worldGrapplePosition, ForceMode.Acceleration);
+                    m_rigidbody.AddForce(grappleForce * (1 - percentForce), ForceMode.Acceleration);
+                    m_grappledRigidbody.AddForceAtPosition(-grappleForce * percentForce, worldGrapplePosition, ForceMode.Acceleration);
+                } catch (MissingReferenceException)
+                {
+                    ReleaseGrapple();
+                }
 
                 break;
         }
@@ -271,16 +282,29 @@ public class PlayerController : MonoBehaviour
                 m_grappleLine.transform.localScale = new Vector3(1, 1, (m_grapplePosition - transform.position).magnitude);
                 break;
             case AttachType.Rigidbody:
-                Vector3 worldGrapplePosition = m_grappledTransform.TransformPoint(m_grapplePosition);
-                m_grappleLine.transform.position = (transform.position + worldGrapplePosition) / 2f;
-                m_grappleLine.transform.rotation = Quaternion.LookRotation(worldGrapplePosition - transform.position);
-                m_grappleLine.transform.localScale = new Vector3(1, 1, (worldGrapplePosition - transform.position).magnitude);
+                try
+                {
+                    Vector3 worldGrapplePosition = m_grappledTransform.TransformPoint(m_grapplePosition);
+                    m_grappleLine.transform.position = (transform.position + worldGrapplePosition) / 2f;
+                    m_grappleLine.transform.rotation = Quaternion.LookRotation(worldGrapplePosition - transform.position);
+                    m_grappleLine.transform.localScale = new Vector3(1, 1, (worldGrapplePosition - transform.position).magnitude);
+                } catch (MissingReferenceException)
+                {
+                    ReleaseGrapple();
+                }
+
                 break;
         }
     }
 
     private void UpdateGrappleState()
     {
+        if (m_grappledHoldable != null && m_grappledHoldable.m_isHeld)
+        {
+            m_grappleState = GrappleState.Held;
+            return;
+        }
+
         if (m_attachType != AttachType.None)
         {
             m_grappleState = GrappleState.Active;
