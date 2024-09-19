@@ -53,6 +53,14 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private Collider m_groundCollider;
 
+    [Header("Sound")]
+
+    [SerializeField]
+    private AudioSource m_audioSource;
+
+    [SerializeField]
+    private AudioClip m_grappleSound;
+
     [System.NonSerialized]
     public Rigidbody m_rigidbody;
 
@@ -250,8 +258,8 @@ public class PlayerController : MonoBehaviour
 
     void FixedUpdate_Movement()
     {
-        m_isGrounded = Physics.CheckCapsule(m_groundCollider.bounds.center, new Vector3(m_groundCollider.bounds.center.x, m_groundCollider.bounds.min.y, m_groundCollider.bounds.center.z), 0.1f, ~LayerMask.GetMask("Ignore Raycast"));
-        m_isNearGrounded = Physics.CheckCapsule(m_groundCollider.bounds.center, new Vector3(m_groundCollider.bounds.center.x, m_groundCollider.bounds.min.y, m_groundCollider.bounds.center.z), 1f, ~LayerMask.GetMask("Ignore Raycast"));
+        m_isGrounded = Physics.CheckCapsule(m_groundCollider.bounds.center, new Vector3(m_groundCollider.bounds.center.x, m_groundCollider.bounds.min.y, m_groundCollider.bounds.center.z), 0.1f, ~LayerMask.GetMask("Ignore Raycast", "TransparentFX"));
+        m_isNearGrounded = Physics.CheckCapsule(m_groundCollider.bounds.center, new Vector3(m_groundCollider.bounds.center.x, m_groundCollider.bounds.min.y, m_groundCollider.bounds.center.z), 1f, ~LayerMask.GetMask("Ignore Raycast", "TransparentFX"));
 
         HandleMove();
         HandleJump();
@@ -270,6 +278,17 @@ public class PlayerController : MonoBehaviour
             m_grappledHoldable.Hold(transform);
             ReleaseGrapple();
         }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.tag.Equals("Finish"))
+        {
+            LevelController.ActiveController.Finish();
+            return;
+        }
+
+        LevelController.ActiveController.Restart();
     }
 
     private void UpdateGrappleLine()
@@ -320,7 +339,7 @@ public class PlayerController : MonoBehaviour
         RaycastHit hit;
         Ray ray = new Ray(m_cameraController.m_camera.transform.position, m_cameraController.m_camera.transform.forward);
 
-        if (Physics.Raycast(ray, out hit, m_maxGrappleLength, ~LayerMask.GetMask("Ignore Raycast")))
+        if (Physics.Raycast(ray, out hit, m_maxGrappleLength, ~LayerMask.GetMask("Ignore Raycast", "TransparentFX")))
         {
             m_grappleState = GrappleState.Ready;
             return;
@@ -332,6 +351,11 @@ public class PlayerController : MonoBehaviour
 
     private void Fire()
     {
+        if (LevelController.ActiveController.GetHasFinished())
+        {
+            return;
+        }
+
         if (m_grappledHoldable != null && m_grappledHoldable.m_isHeld)
         {
             m_grappledHoldable.Release();
@@ -352,8 +376,10 @@ public class PlayerController : MonoBehaviour
         RaycastHit hit;
         Ray ray = new Ray(m_cameraController.m_camera.transform.position, m_cameraController.m_camera.transform.forward);
 
-        if (Physics.Raycast(ray, out hit, m_maxGrappleLength, ~LayerMask.GetMask("Ignore Raycast")))
+        if (Physics.Raycast(ray, out hit, m_maxGrappleLength, ~LayerMask.GetMask("Ignore Raycast", "TransparentFX")))
         {
+            PlayGrappleShot();
+
             if (!m_isGrounded) --m_shotCount;
 
             if (hit.rigidbody == null)
@@ -391,6 +417,13 @@ public class PlayerController : MonoBehaviour
 
         Destroy(m_grappleLine);
         m_doFriction = true;
+    }
+
+    private void PlayGrappleShot()
+    {
+        m_audioSource.clip = m_grappleSound;
+        m_audioSource.time = 0.2f;
+        m_audioSource.Play();
     }
 
     private void HandleMove()

@@ -13,4 +13,14 @@ public class Key : MonoBehaviour
     {
         m_ID = m_nextID++;
     }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.tag.Equals("Finish"))
+        {
+            return;
+        }
+
+        LevelController.ActiveController.Restart();
+    }
 }

@@ -42,8 +42,6 @@ public class CameraController : MonoBehaviour
         m_controls.Player.Enable();
         UnityEngine.Cursor.visible = false;
         UnityEngine.Cursor.lockState = CursorLockMode.Locked;
-
-        m_eulerAngles = new Vector3(transform.localEulerAngles.x, m_camera.transform.localEulerAngles.y, 0f);
     }
 
     private void OnDisable()
@@ -63,6 +61,7 @@ public class CameraController : MonoBehaviour
     private void Start()
     {
         m_rootPosition = m_camera.transform.localPosition;
+        m_eulerAngles = new Vector3(m_camera.transform.eulerAngles.x, m_camera.transform.eulerAngles.y, 0f);
     }
 
     private void Update()
